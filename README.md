@@ -35,3 +35,35 @@ The first milestone is intentionally small:
 4. Read the event in PaymentService
 
 After that the project will gradually grow into a small performance lab for Kafka and Outbox.
+
+## Local infrastructure
+
+The project uses Kafka as a local event broker.
+
+### Start infrastructure
+
+```bash
+docker compose up -d
+```
+### Stop infrastructure
+```bash
+docker compose down
+```
+### Kafka UI
+
+Kafka UI is available at:
+```text
+http://localhost:8080
+```
+### Kafka broker
+
+For applications running on the host machine, Kafka is available at:
+```text
+localhost:9092
+```
+Inside Docker Compose network, services can use:
+
+```text
+kafka:29092
+```
+
