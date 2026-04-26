@@ -1,5 +1,5 @@
 services:
-   kafka:
+  kafka:
     image: apache/kafka:3.7.2
     container_name: orderflow-kafka
     hostname: kafka
@@ -24,5 +24,17 @@ services:
       KAFKA_NUM_PARTITIONS: 3
     volumes:
       - kafka-data:/tmp/kraft-combined-logs
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: orderflow-kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: orderflow-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+
 volumes:
   kafka-data:

@@ -52,17 +52,18 @@ docker compose down
 ### Kafka UI
 
 Kafka UI is available at:
-
+```text
 http://localhost:8080
-
+```
 ### Kafka broker
 
 For applications running on the host machine, Kafka is available at:
-
+```text
 localhost:9092
-
+```
 Inside Docker Compose network, services can use:
 
-kafka:9092
-
+```text
+kafka:29092
+```
 
