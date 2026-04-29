@@ -4,11 +4,6 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<IProducer<string, string>>(_ =>
@@ -36,6 +31,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Disabled for local HTTP testing with curl/Postman.
 // app.UseHttpsRedirection();
 
 app.MapPost("/orders/test-event", async (
@@ -51,7 +47,9 @@ app.MapPost("/orders/test-event", async (
     }
 
     var orderCreatedEvent = new OrderCreatedEvent(
+        EventId: Guid.NewGuid(),
         OrderId: Guid.NewGuid(),
+        UserId: Guid.NewGuid(),
         CreatedAt: DateTimeOffset.UtcNow,
         Amount: 1000m,
         Currency: "RUB");
