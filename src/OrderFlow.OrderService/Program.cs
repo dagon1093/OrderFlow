@@ -1,8 +1,32 @@
+using Confluent.Kafka;
+using OrderFlow.Contracts;
+using System.Text.Json;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+
+builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton<IProducer<string, string>>(_ =>
+{
+    var bootstrapServers = builder.Configuration["Kafka:BootstrapServers"];
+
+    if (string.IsNullOrWhiteSpace(bootstrapServers))
+    {
+        throw new InvalidOperationException("Kafka:BootstrapServers is not configured.");
+    }
+
+    var producerConfig = new ProducerConfig
+    {
+        BootstrapServers = bootstrapServers
+    };
+
+    return new ProducerBuilder<string, string>(producerConfig).Build();
+});
 
 var app = builder.Build();
 
@@ -12,30 +36,58 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapPost("/orders/test-event", async (
+    IProducer<string, string> producer,
+    IConfiguration configuration,
+    ILogger<Program> logger) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var topic = configuration["Kafka:OrderCreatedTopic"];
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    if (string.IsNullOrWhiteSpace(topic))
+    {
+        return Results.Problem("Kafka:OrderCreatedTopic is not configured.");
+    }
+
+    var orderCreatedEvent = new OrderCreatedEvent(
+        OrderId: Guid.NewGuid(),
+        CreatedAt: DateTimeOffset.UtcNow,
+        Amount: 1000m,
+        Currency: "RUB");
+
+    var key = orderCreatedEvent.OrderId.ToString();
+
+    var value = JsonSerializer.Serialize(orderCreatedEvent);
+
+    var deliveryResult = await producer.ProduceAsync(
+        topic,
+        new Message<string, string>
+        {
+            Key = key,
+            Value = value
+        });
+
+    logger.LogInformation(
+        "Kafka message delivered. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}, Status: {Status}, Key: {Key}",
+        deliveryResult.Topic,
+        deliveryResult.Partition.Value,
+        deliveryResult.Offset.Value,
+        deliveryResult.Status,
+        key);
+
+    return Results.Ok(new
+    {
+        Message = "Order created event was sent to Kafka",
+        Topic = deliveryResult.Topic,
+        Partition = deliveryResult.Partition.Value,
+        Offset = deliveryResult.Offset.Value,
+        Status = deliveryResult.Status.ToString(),
+        Key = key,
+        Event = orderCreatedEvent
+    });
 })
-.WithName("GetWeatherForecast");
+.WithName("SendOrderCreatedTestEvent");
+
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
