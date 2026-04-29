@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace OrderFlow.Contracts
+﻿namespace OrderFlow.Contracts
 {
     public sealed record OrderCreatedEvent(
         Guid OrderId,
