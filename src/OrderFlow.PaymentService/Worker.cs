@@ -37,7 +37,7 @@ public class Worker(
             BootstrapServers = bootstrapServers,
             GroupId = groupId,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true
+            EnableAutoCommit = false
         };
 
         using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
@@ -113,6 +113,14 @@ public class Worker(
                    orderCreatedEvent.Currency,
                    consumeResult.Partition.Value,
                    consumeResult.Offset.Value);
+
+                consumer.Commit(consumeResult);
+
+                logger.LogInformation(
+                    "Kafka offset committed. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}",
+                    consumeResult.Topic,
+                    consumeResult.Partition.Value,
+                    consumeResult.Offset.Value);
             }
         }
         catch (OperationCanceledException)
