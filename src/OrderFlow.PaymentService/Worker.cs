@@ -122,6 +122,7 @@ public class Worker(
         catch (Exception ex)
         {
             logger.LogError(ex, "An error occurred while consuming messages from Kafka.");
+            throw;
         }
         finally
         {
