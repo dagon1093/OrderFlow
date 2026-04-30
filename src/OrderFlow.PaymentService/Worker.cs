@@ -9,8 +9,11 @@ public class Worker(
     IConfiguration configuration) : BackgroundService
 {
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+
+        await Task.Yield();
+
         var bootstrapServers = configuration["Kafka:BootstrapServers"];
         var topic = configuration["Kafka:OrderCreatedTopic"];
         var groupId = configuration["Kafka:GroupId"];
@@ -51,10 +54,43 @@ public class Worker(
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var consumeResult = consumer.Consume(stoppingToken);
 
-                var orderCreatedEvent = JsonSerializer.Deserialize<OrderCreatedEvent>(
-                    consumeResult.Message.Value);
+                ConsumeResult<string, string> consumeResult;
+
+                try
+                {
+                    consumeResult = consumer.Consume(stoppingToken);
+                }
+                catch (ConsumeException ex)
+                {
+                    logger.LogError(
+                        ex,
+                        "Kafka consume error. Reason: {Reason}",
+                        ex.Error.Reason);
+
+                    continue;
+                }
+
+                OrderCreatedEvent? orderCreatedEvent;
+
+                try
+                {
+                    orderCreatedEvent = JsonSerializer.Deserialize<OrderCreatedEvent>(
+                        consumeResult.Message.Value);
+                }
+                catch (JsonException ex)
+                {
+                    logger.LogError(
+                        ex,
+                        "Failed to deserialize Kafka message. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}, Value: {Value}",
+                        consumeResult.Topic,
+                        consumeResult.Partition.Value,
+                        consumeResult.Offset.Value,
+                        consumeResult.Message.Value);
+
+                    continue;
+                }
+
 
                 if (orderCreatedEvent is null)
                 {
@@ -93,7 +129,6 @@ public class Worker(
             consumer.Close();
             logger.LogInformation("Kafka consumer has been closed.");
         }
-        return Task.CompletedTask;
     }
 }
 
