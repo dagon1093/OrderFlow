@@ -11,7 +11,6 @@ public class Worker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-
         await Task.Yield();
 
         var bootstrapServers = configuration["Kafka:BootstrapServers"];
