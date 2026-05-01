@@ -1,10 +1,22 @@
 using Confluent.Kafka;
 using OrderFlow.Contracts;
 using System.Text.Json;
+using OrderFlow.OrderService.Orders;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<OrdersDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("OrdersDatabase");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException("Connection string 'OrdersDatabase' is not configured.");
+    }
+    options.UseNpgsql(connectionString);
+});
 
 builder.Services.AddSingleton<IProducer<string, string>>(_ =>
 {
@@ -86,6 +98,27 @@ app.MapPost("/orders/test-event", async (
     });
 })
 .WithName("SendOrderCreatedTestEvent");
+
+app.MapPost("/orders", async (
+    CreateOrderRequest request,
+    OrdersDbContext dbContext) =>
+{
+    var order = new Order
+    {
+        Id = Guid.NewGuid(),
+        UserId = request.UserId,
+        Amount = request.Amount,
+        Currency = request.Currency,
+        CreatedAt = DateTimeOffset.UtcNow
+    };
+
+    dbContext.Orders.Add(order);
+
+    await dbContext.SaveChangesAsync();
+
+    return Results.Created($"/orders/{order.Id}", order);
+})
+.WithName("CreateOrder");
 
 
 app.Run();
