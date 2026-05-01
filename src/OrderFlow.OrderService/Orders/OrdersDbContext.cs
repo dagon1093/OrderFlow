@@ -19,6 +19,10 @@ public sealed class OrdersDbContext : DbContext
 
             entity.HasKey(order => order.Id);
 
+            entity.Property(order => order.Id)
+                .HasColumnName("id")
+                .IsRequired();
+
             entity.Property(order => order.UserId)
                 .HasColumnName("user_id")
                 .IsRequired();
