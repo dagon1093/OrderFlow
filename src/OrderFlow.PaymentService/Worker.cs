@@ -37,7 +37,7 @@ public class Worker(
             BootstrapServers = bootstrapServers,
             GroupId = groupId,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true
+            EnableAutoCommit = false
         };
 
         using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
@@ -87,6 +87,16 @@ public class Worker(
                         consumeResult.Offset.Value,
                         consumeResult.Message.Value);
 
+                    // Temporary behavior: skip malformed messages to avoid blocking the partition.
+                    // Later this should be replaced with DLQ handling.
+                    consumer.Commit(consumeResult);
+
+                    logger.LogWarning(
+                        "Invalid Kafka message skipped and offset committed. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}",
+                        consumeResult.Topic,
+                        consumeResult.Partition.Value,
+                        consumeResult.Offset.Value);
+
                     continue;
                 }
 
@@ -99,10 +109,17 @@ public class Worker(
                         consumeResult.Partition.Value,
                         consumeResult.Offset.Value);
 
+                    // Temporary behavior: skip malformed messages to avoid blocking the partition.
+                    // Later this should be replaced with DLQ handling.
+                    consumer.Commit(consumeResult);
+
+                    logger.LogWarning(
+                        "Empty Kafka message skipped and offset committed. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}",
+                        consumeResult.Topic,
+                        consumeResult.Partition.Value,
+                        consumeResult.Offset.Value);
                     continue;
                 }
-
-
 
                 logger.LogInformation(
                    "Order created event received. EventId: {EventId}, OrderId: {OrderId}, UserId: {UserId}, Amount: {Amount}, Currency: {Currency}, Partition: {Partition}, Offset: {Offset}",
@@ -113,6 +130,14 @@ public class Worker(
                    orderCreatedEvent.Currency,
                    consumeResult.Partition.Value,
                    consumeResult.Offset.Value);
+
+                consumer.Commit(consumeResult);
+
+                logger.LogInformation(
+                    "Kafka offset committed. Topic: {Topic}, Partition: {Partition}, Offset: {Offset}",
+                    consumeResult.Topic,
+                    consumeResult.Partition.Value,
+                    consumeResult.Offset.Value);
             }
         }
         catch (OperationCanceledException)
