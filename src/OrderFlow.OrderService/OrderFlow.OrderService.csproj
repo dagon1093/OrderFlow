@@ -21,4 +21,8 @@
     <ProjectReference Include="..\OrderFlow.Contracts\OrderFlow.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>
