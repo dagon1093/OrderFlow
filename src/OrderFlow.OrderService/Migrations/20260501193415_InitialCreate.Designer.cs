@@ -12,7 +12,7 @@ using OrderFlow.OrderService.Orders;
 namespace OrderFlow.OrderService.Migrations
 {
     [DbContext(typeof(OrdersDbContext))]
-    [Migration("20260501183914_InitialCreate")]
+    [Migration("20260501193415_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -29,7 +29,8 @@ namespace OrderFlow.OrderService.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
