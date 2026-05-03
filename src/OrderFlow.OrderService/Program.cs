@@ -103,6 +103,8 @@ app.MapPost("/orders", async (
     CreateOrderRequest request,
     OrdersDbContext dbContext) =>
 {
+    var now = DateTimeOffset.UtcNow;
+
     var order = new Order
     {
         Id = Guid.NewGuid(),
@@ -112,7 +114,24 @@ app.MapPost("/orders", async (
         CreatedAt = DateTimeOffset.UtcNow
     };
 
+    var orderCreatedEvent = new OrderCreatedEvent(
+        EventId: Guid.NewGuid(),
+        OrderId: order.Id,
+        UserId: order.UserId,
+        CreatedAt: order.CreatedAt,
+        Amount: order.Amount,
+        Currency: order.Currency);
+
+    var outboxMessage = new OutboxMessage
+    {
+        Id = orderCreatedEvent.EventId,
+        Type = nameof(OrderCreatedEvent),
+        Payload = JsonSerializer.Serialize(orderCreatedEvent),
+        OccurredAt = now
+    };
+
     dbContext.Orders.Add(order);
+    dbContext.OutboxMessages.Add(outboxMessage);
 
     await dbContext.SaveChangesAsync();
 
