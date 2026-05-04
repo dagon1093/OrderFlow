@@ -111,7 +111,7 @@ app.MapPost("/orders", async (
         UserId = request.UserId,
         Amount = request.Amount,
         Currency = request.Currency,
-        CreatedAt = DateTimeOffset.UtcNow
+        CreatedAt = now
     };
 
     var orderCreatedEvent = new OrderCreatedEvent(
