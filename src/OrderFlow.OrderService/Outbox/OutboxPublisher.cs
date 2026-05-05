@@ -18,7 +18,6 @@ public sealed class OutboxPublisher : BackgroundService
         IServiceScopeFactory scopeFactory,
         IProducer<string, string> producer,
         ILogger<OutboxPublisher> logger,
-        string orderCreatedTopic,
         IConfiguration configuration)
     {
         _scopeFactory = scopeFactory;

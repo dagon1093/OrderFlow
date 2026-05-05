@@ -38,15 +38,6 @@ builder.Services.AddSingleton<IProducer<string, string>>(_ =>
 
 builder.Services.AddHostedService<OutboxPublisher>();
 
-builder.Services.AddSingleton<IProducer<string, string>>(_ =>
-{
-    var config = new ProducerConfig
-    {
-        BootstrapServers = builder.Configuration["Kafka:BootstrapServers"]
-    };
-
-    return new ProducerBuilder<string, string>(config).Build();
-});
 
 var app = builder.Build();
 
