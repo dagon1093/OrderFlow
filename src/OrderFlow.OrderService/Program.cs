@@ -1,8 +1,9 @@
 using Confluent.Kafka;
-using OrderFlow.Contracts;
-using System.Text.Json;
-using OrderFlow.OrderService.Orders;
 using Microsoft.EntityFrameworkCore;
+using OrderFlow.Contracts;
+using OrderFlow.OrderService.Orders;
+using OrderFlow.OrderService.Outbox;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +34,18 @@ builder.Services.AddSingleton<IProducer<string, string>>(_ =>
     };
 
     return new ProducerBuilder<string, string>(producerConfig).Build();
+});
+
+builder.Services.AddHostedService<OutboxPublisher>();
+
+builder.Services.AddSingleton<IProducer<string, string>>(_ =>
+{
+    var config = new ProducerConfig
+    {
+        BootstrapServers = builder.Configuration["Kafka:BootstrapServers"]
+    };
+
+    return new ProducerBuilder<string, string>(config).Build();
 });
 
 var app = builder.Build();
