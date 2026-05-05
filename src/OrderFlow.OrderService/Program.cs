@@ -38,7 +38,6 @@ builder.Services.AddSingleton<IProducer<string, string>>(_ =>
 
 builder.Services.AddHostedService<OutboxPublisher>();
 
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

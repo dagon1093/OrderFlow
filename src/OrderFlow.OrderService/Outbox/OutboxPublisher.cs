@@ -24,7 +24,7 @@ public sealed class OutboxPublisher : BackgroundService
         _producer = producer;
         _logger = logger;
         _orderCreatedTopic = configuration["Kafka:OrderCreatedTopic"]
-        ?? throw new InvalidOperationException("Kafka:OrderCreatedTopic is not configured"); ;
+        ?? throw new InvalidOperationException("Kafka:OrderCreatedTopic is not configured");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
