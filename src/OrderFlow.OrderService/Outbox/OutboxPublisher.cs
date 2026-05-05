@@ -12,15 +12,20 @@ public sealed class OutboxPublisher : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IProducer<string, string> _producer;
     private readonly ILogger<OutboxPublisher> _logger;
+    private readonly string _orderCreatedTopic;
 
     public OutboxPublisher(
         IServiceScopeFactory scopeFactory,
         IProducer<string, string> producer,
-        ILogger<OutboxPublisher> logger)
+        ILogger<OutboxPublisher> logger,
+        string orderCreatedTopic,
+        IConfiguration configuration)
     {
         _scopeFactory = scopeFactory;
         _producer = producer;
         _logger = logger;
+        _orderCreatedTopic = configuration["Kafka:OrderCreatedTopic"]
+        ?? throw new InvalidOperationException("Kafka:OrderCreatedTopic is not configured"); ;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -62,7 +67,7 @@ public sealed class OutboxPublisher : BackgroundService
             try
             {
                 await _producer.ProduceAsync(
-                    "orders",
+                    _orderCreatedTopic,
                     new Message<string, string>
                     {
                         Key = message.Id.ToString(),
