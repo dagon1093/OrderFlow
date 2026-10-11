@@ -7,7 +7,7 @@ namespace OrderFlow.OrderService.Outbox;
 public sealed class OutboxPublisher : BackgroundService
 {
     private const int BatchSize = 50;
-    private static readonly TimeSpan Delay = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(200);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IProducer<string, string> _producer;
