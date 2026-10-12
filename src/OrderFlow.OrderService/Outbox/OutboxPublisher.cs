@@ -1,4 +1,5 @@
-﻿using Confluent.Kafka;
+﻿using System.Diagnostics;
+using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
 using OrderFlow.OrderService.Orders;
 
@@ -50,11 +51,15 @@ public sealed class OutboxPublisher : BackgroundService
 
         var dbContext = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
 
+        var stopwatch = Stopwatch.StartNew();
+        
         var messages = await dbContext.OutboxMessages
             .Where(message => message.ProcessedAt == null)
             .OrderBy(message => message.OccurredAt)
             .Take(BatchSize)
             .ToListAsync(cancellationToken);
+        
+        var batchReadMs = stopwatch.ElapsedMilliseconds;
 
         if (messages.Count == 0)
         {
@@ -89,5 +94,12 @@ public sealed class OutboxPublisher : BackgroundService
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        stopwatch.Stop();
+        _logger.LogInformation(
+            "Outbox batch processed: BatchSize={BatchSize}, " +
+            "BatchReadMs={BatchReadMs}, DurationMs={DurationMs}",
+            messages.Count,
+            batchReadMs,
+            stopwatch.ElapsedMilliseconds);
     }
 }
