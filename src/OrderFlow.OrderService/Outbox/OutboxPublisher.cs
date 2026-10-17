@@ -8,7 +8,8 @@ namespace OrderFlow.OrderService.Outbox;
 public sealed class OutboxPublisher : BackgroundService
 {
     private const int BatchSize = 50;
-    private static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan EmptyDelay = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(10);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IProducer<string, string> _producer;
@@ -32,20 +33,34 @@ public sealed class OutboxPublisher : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            var messagesCount = 0;
             try
             {
-                await PublishBatchAsync(stoppingToken);
+                messagesCount = await PublishBatchAsync(stoppingToken);
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while publishing outbox messages");
             }
 
-            await Task.Delay(Delay, stoppingToken);
+            if (messagesCount == 0)
+            {
+                await Task.Delay(EmptyDelay, stoppingToken);
+            }
+            else
+            {
+                await Task.Delay(Delay, stoppingToken);
+            }
+            
         }
     }
 
-    private async Task PublishBatchAsync(CancellationToken cancellationToken)
+    private async Task<int> PublishBatchAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
 
@@ -63,7 +78,7 @@ public sealed class OutboxPublisher : BackgroundService
 
         if (messages.Count == 0)
         {
-            return;
+            return 0;
         }
 
         foreach (var message in messages)
@@ -92,14 +107,24 @@ public sealed class OutboxPublisher : BackgroundService
                     message.Id);
             }
         }
+        
+        var publishLoopMs = stopwatch.ElapsedMilliseconds -  batchReadMs;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         stopwatch.Stop();
+        
+        var saveChangesMs = stopwatch.ElapsedMilliseconds - batchReadMs -  publishLoopMs;
+        
         _logger.LogInformation(
             "Outbox batch processed: BatchSize={BatchSize}, " +
-            "BatchReadMs={BatchReadMs}, DurationMs={DurationMs}",
+            "BatchReadMs={BatchReadMs}, PublishLoopMs={PublishLoopMs}, " +
+            "SaveChangesMs={SaveChangesMs}, DurationMs={DurationMs}",
             messages.Count,
             batchReadMs,
+            publishLoopMs,
+            saveChangesMs,
             stopwatch.ElapsedMilliseconds);
+        
+        return messages.Count;
     }
 }
